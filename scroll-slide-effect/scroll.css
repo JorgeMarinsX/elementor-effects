@@ -1,0 +1,38 @@
+/* Detecta automaticamente se existe .fs-slide na página */
+html:has(.fs-slide) {
+  scroll-snap-type: y mandatory;
+  scroll-padding-top: 0px; /* ajuste se tiver header fixo, ex: 80px */
+  scroll-behavior: smooth;
+}
+
+/* Caso use sticky header, ajuste para: html:has(.fs-slide) { scroll-padding-top: 90px; } */
+
+html:has(.fs-slide) body {
+  overscroll-behavior-y: none;
+}
+
+/* Cada slide ocupa 100vh e encaixa no snap */
+.fs-slide {
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  
+  position: relative;
+}
+
+/* Área interna rolável */
+.fs-inner-scroll {
+  max-height: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Acessibilidade */
+@media (prefers-reduced-motion: reduce) {
+  html:has(.fs-slide) {
+    scroll-behavior: auto;
+  }
+}
