@@ -69,6 +69,25 @@
     return container.scrollTop > 0;
   }
 
+  // Get the current slide element if viewport is snapped to one, null otherwise
+  function getCurrentSnappedSlide() {
+    const scrollY = getScrollY();
+    const threshold = 10; // pixels tolerance for "snapped"
+
+    for (const slide of state.slides) {
+      const top = getSlideTop(slide);
+      if (Math.abs(scrollY - top) < threshold) {
+        return slide;
+      }
+    }
+    return null;
+  }
+
+  // Check if we're snapped to a slide (not just scrolling through)
+  function isSnappedToSlide() {
+    return getCurrentSnappedSlide() !== null;
+  }
+
   function scrollToSlide(index) {
     if (!state.slides.length) return;
 
@@ -89,11 +108,16 @@
   function onWheel(e) {
     if (e.ctrlKey) return;
 
+    // Exit early if no slides - allow normal page scrolling
+    if (!state.slides.length) return;
+
+    // Only capture scroll when we're snapped to a slide
+    // This allows normal scrolling through non-fs-slide sections
+    if (!isSnappedToSlide()) return;
+
     const direction = e.deltaY > 0 ? 1 : -1;
     const inner = findInnerScrollContainer(e.target);
     if (inner && innerCanScroll(inner, direction)) return;
-
-    if (!state.slides.length) return;
 
     const now = Date.now();
     if (state.isAnimating || now - state.lastWheelTs < WHEEL_LOCK_MS) {
@@ -101,14 +125,36 @@
       return;
     }
 
+    const nextIndex = state.index + direction;
+
+    // If we're trying to scroll past the first or last slide, let the browser handle it
+    if (nextIndex < 0 || nextIndex >= state.slides.length) {
+      return;
+    }
+
+    // Check if the next slide is actually adjacent (no non-slide content between)
+    const currentSlide = state.slides[state.index];
+    const nextSlide = state.slides[nextIndex];
+    const currentBottom = getSlideTop(currentSlide) + currentSlide.offsetHeight;
+    const nextTop = getSlideTop(nextSlide);
+    const gap = direction > 0 ? nextTop - currentBottom : getSlideTop(currentSlide) - (nextTop + nextSlide.offsetHeight);
+
+    // If there's more than 5px gap, there's content between slides - let browser scroll normally
+    if (gap > 5) {
+      return;
+    }
+
     state.lastWheelTs = now;
     e.preventDefault();
 
-    scrollToSlide(state.index + direction);
+    scrollToSlide(nextIndex);
   }
 
   function onKeyDown(e) {
     if (!state.slides.length) return;
+
+    // Only capture keyboard when we're snapped to a slide
+    if (!isSnappedToSlide()) return;
 
     const tag = (e.target && e.target.tagName || "").toLowerCase();
     const isTypingField =
@@ -140,12 +186,25 @@
   function onTouchStart(e) {
     if (!state.slides.length) return;
     if (!e.touches || e.touches.length !== 1) return;
+
+    // Only track touch if we're snapped to a slide
+    if (!isSnappedToSlide()) {
+      state.touchStartY = null;
+      return;
+    }
+
     state.touchStartY = e.touches[0].clientY;
   }
 
   function onTouchEnd(e) {
     if (!state.slides.length) return;
     if (state.touchStartY == null) return;
+
+    // If we're no longer snapped to a slide, cancel the gesture
+    if (!isSnappedToSlide()) {
+      state.touchStartY = null;
+      return;
+    }
 
     const endY = (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientY) ?? null;
     if (endY == null) {
@@ -170,7 +229,10 @@
     if (state.scrollRaf) return;
     state.scrollRaf = window.requestAnimationFrame(() => {
       state.scrollRaf = 0;
-      if (state.slides.length) {
+      if (!state.slides.length) return;
+
+      // Only update index when we're snapped to a slide
+      if (isSnappedToSlide()) {
         state.index = getNearestSlideIndex();
       }
     });

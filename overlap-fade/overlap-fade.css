@@ -1,0 +1,68 @@
+/* Stage */
+.fx-fade-stack{
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  overflow: hidden; /* important: no “real scroll” inside */
+}
+
+/* Panels overlap */
+.fx-fade-stack .fx-fade-panel{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 650ms ease;
+
+  /* Keep rendering stable while fading */
+  will-change: opacity;
+}
+
+/* Active panel */
+.fx-fade-stack .fx-fade-panel.is-active{
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 2;
+}
+
+/* Optional: previous panel beneath active (helps during transition) */
+.fx-fade-stack .fx-fade-panel.is-prev{
+  opacity: 0;
+  z-index: 1;
+}
+
+/* When we lock page scroll (JS sets this) */
+html.fx-scroll-locked,
+html.fx-scroll-locked body{
+  overflow: hidden;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .fx-fade-stack .fx-fade-panel{
+    transition: none;
+  }
+}
+
+
+/*
+The lines of code below make the editor show the sections without overlap. 
+Uncomment this to make it work, but remember to comment it back before using the effect.
+
+.elementor-editor-active .fx-fade-stack {
+  display: flex;
+  flex-direction: column;
+  height: auto !important;
+}
+.elementor-editor-active .fx-fade-panel {
+  position: relative !important;
+  opacity: 1 !important;
+}
+
+
+
+*/
